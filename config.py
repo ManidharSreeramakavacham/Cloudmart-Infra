@@ -1,0 +1,5 @@
+AWS_REGION = "ap-south-2"
+AMI_ID = "ami-09aa82e803f05d496"
+INSTANCE_TYPE = "t3.micro"
+KEY_PAIR_NAME = "cloudmart-key-01"
+INSTANCE_NAME = "cloudmart-instance-01"

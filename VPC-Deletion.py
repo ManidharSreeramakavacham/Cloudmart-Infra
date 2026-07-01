@@ -8,8 +8,11 @@ print("========== EC2 Instance Manager ==========\n")
 # Get all instances
 response = client.describe_instances()
 sec_response = client.describe_security_groups()
+rt_response = client.describe_route_tables()
 
 instances = {}
+
+routetables={}
 
 count = 0
 
@@ -99,7 +102,65 @@ for sec_grp in sec_response['SecurityGroups']:
     print("-------------------------------------------------------------")
 
 # Ask the user which instance to terminate
-del_sec_id = input("Give me the ID of the Security Group tou want to delete:")
-print("Initiating Security Group deletion sequence...")
-client.delete_security_group(GroupId=del_sec_id)
-print("Security Group Deleted...")
+del_sec_id = input("Give me the ID of the Security Group you want to delete:")
+if del_sec_id == "default":
+    print("You cannot delete the default security group.")
+    exit()
+elif del_sec_id == "":
+    print("No Security Group ID provided. Moving to next step...")
+else:    
+    print("Initiating Security Group deletion sequence...")
+    client.delete_security_group(GroupId=del_sec_id)
+    print("Security Group Deleted...")
+
+print("-------------------------------------------------------------")
+print("Available Route Tables")
+print("-------------------------------------------------------------")
+
+for rt_tbl in rt_response['RouteTables']:
+
+    rt_id = rt_tbl['RouteTableId']
+    vpc_id = rt_tbl['VpcId']
+
+    rt_name = "No Name Tag"
+
+    # Get the Name tag of the Route Table
+    for tag in rt_tbl.get('Tags', []):
+
+        if tag['Key'] == 'Name':
+            rt_name = tag['Value']
+            break
+
+    routetables[rt_id] = rt_name
+
+    print(f"Name    : {rt_name}")
+    print(f"ID      : {rt_id}")
+    print(f"VPC ID  : {vpc_id}")
+    print("=====================================================================")
+    # Print association information
+    for association in rt_tbl.get('Associations', []):
+
+        association_id = association.get('RouteTableAssociationId', "N/A")
+        state = association.get('AssociationState', {}).get('State', "Unknown")
+        main = association.get('Main', False)
+        
+        print(f"Association ID : {association_id}")
+        print(f"State          : {state}")
+        print(f"Main           : {main}")
+
+print("-------------------------------------------------------------")
+art_del_input=input("Please provide the Association ID you want to delete (or press Enter to skip):   ")
+if art_del_input == "":
+    print("No Association ID provided. Moving to next step...")
+else:
+    client.disassociate_route_table(AssociationId=art_del_input)
+    print("Route Table Dissociated...")
+
+rt_del_input=input("Please provide the Route Table ID you want to delete (or press Enter to skip):   ")
+if rt_del_input == "":
+    print("No Route Table ID provided. Moving to next step...")
+else:
+    print("Deleting the Route Table...")
+    client.delete_route_table(RouteTableId=rt_del_input)
+    print("Route Table Deleted")
+    print("-------------------------------------------------------------")

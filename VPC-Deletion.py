@@ -3,19 +3,20 @@ import boto3
 client = boto3.client('ec2')
 ec2 = boto3.resource('ec2')
 
+user_tag = input("Please provide the user tag: ").strip()
 print("========== EC2 Instance Manager ==========\n")
 
 # Get all instances
 response = client.describe_instances()
 sec_response = client.describe_security_groups()
 rt_response = client.describe_route_tables()
+ig_response = client.describe_internet_gateways()
 
 instances = {}
 
 routetables={}
 
 count = 0
-
 print("Available EC2 Instances")
 print("-------------------------------------------------------------")
 
@@ -164,3 +165,50 @@ else:
     client.delete_route_table(RouteTableId=rt_del_input)
     print("Route Table Deleted")
     print("-------------------------------------------------------------")
+##################### Detaching Internet Gateway ########################
+print("-------------------------------------------------------------")
+print("Available Internet Gateways")
+print("-------------------------------------------------------------")
+
+for igw in ig_response['InternetGateways']:
+
+    igw_id = igw['InternetGatewayId']
+    igw_name = "No Name Tag"      # Reset for every Internet Gateway
+
+    # Find the Name tag
+    for tg in igw.get('Tags', []):
+        if tg['Key'] == 'Name':
+            if tg['Value'] == user_tag:
+                igw_name = tg['Value']
+            break
+
+    # Print attachment details
+    for attachment in igw.get('Attachments', []):
+
+        vpc_id = attachment.get('VpcId', "N/A")
+        state = attachment.get('State', "Unknown")
+
+        print(f"Name   : {igw_name}")
+        print(f"ID     : {igw_id}")
+        print(f"VPC ID : {vpc_id}")
+        print(f"State  : {state}")
+        print("-------------------------------------------------------------")
+
+ig_input=input("Please provide the Internet Gateway ID you want to detach (or press Enter to skip):")
+vpc_id = input("Please provide the VPC ID associated with the Internet Gateway (or press Enter to skip):")
+if ig_input == "":
+    print("No Internet Gateway ID provided. Moving to next step...")
+else:
+    # Detach the Internet Gateway
+    print("Detaching the Internet Gateway...")
+    client.detach_internet_gateway(InternetGatewayId=ig_input, VpcId=vpc_id)
+    print("Internet Gateway Detached...")
+
+    print("-------------------------------------------------------------")
+    print("Deleteing the Internet Gateway...")
+    # Delete the Internet Gateway
+    print("Deleting the Internet Gateway...")
+    client.delete_internet_gateway(InternetGatewayId=ig_input)
+    print("Internet Gateway Deleted...")
+
+################ Delete the Subnet ########################

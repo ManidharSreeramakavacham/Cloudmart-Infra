@@ -11,6 +11,7 @@ response = client.describe_instances()
 sec_response = client.describe_security_groups()
 rt_response = client.describe_route_tables()
 ig_response = client.describe_internet_gateways()
+sub_response = client.describe_subnets()
 
 instances = {}
 
@@ -212,3 +213,73 @@ else:
     print("Internet Gateway Deleted...")
 
 ################ Delete the Subnet ########################
+print("-------------------------------------------------------------")
+print("Available Subnets")
+print("-------------------------------------------------------------")
+
+for sub in sub_response['Subnets']:
+
+    sub_id = sub['SubnetId']
+    vpc_id = sub['VpcId']
+    sub_name = "No Name Tag"      # Reset for every Subnet
+
+    # Find the Name tag
+    for tg in sub.get('Tags', []):
+        if tg['Key'] == 'Name':
+            if tg['Value'] == user_tag:
+                sub_name = tg['Value']
+            break
+
+    print(f"Name   : {sub_name}")
+    print(f"ID     : {sub_id}")
+    print(f"VPC ID : {vpc_id}")
+    print("-------------------------------------------------------------")
+
+sub_input=input("Please provide the Subnet ID you want to delete (or press Enter to skip):")
+if sub_input == "":
+    print("No Subnet ID provided. Moving to next step...")
+else:
+    # Delete the Subnet
+    print("Deleting the Subnet...")
+    client.delete_subnet(SubnetId=sub_input)
+    print("Subnet Deleted...")
+print("------------------------------------------------------------------")
+
+##################### Delete the VPC ########################
+print("-------------------------------------------------------------")
+print("Available VPCs")
+print("-------------------------------------------------------------")
+
+for vpc in client.describe_vpcs()['Vpcs']:
+
+    vpc_id = vpc['VpcId']
+    vpc_name = "No Name Tag"
+
+    # Find the Name tag
+    for tg in vpc.get('Tags', []):
+        if tg['Key'] == 'Name':
+            vpc_name = tg['Value']
+            break
+
+    # Check whether this VPC belongs to the project
+    if vpc_name == user_tag:
+        match = " <-- MATCH"
+    else:
+        match = ""
+
+    print(f"Name : {vpc_name}{match}")
+    print(f"ID   : {vpc_id}")
+    print("-------------------------------------------------------------")
+
+vpc_input = input("Please provide the VPC ID you want to delete (or press Enter to skip): ").strip()
+
+if vpc_input == "":
+    print("No VPC ID provided. Exiting the script...")
+else:
+    print("Deleting the VPC...")
+    client.delete_vpc(VpcId=vpc_input)
+    print("VPC Deleted...")
+    print("-------------------------------------------------------------")
+
+
+print("\n Congratulations!, All basic resources in our VPC have been deleted successfully.")
